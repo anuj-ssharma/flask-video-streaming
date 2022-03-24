@@ -2,6 +2,8 @@
 from importlib import import_module
 import os
 from flask import Flask, render_template, Response
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # import camera driver
 # if os.environ.get('CAMERA'):
@@ -13,9 +15,21 @@ from flask import Flask, render_template, Response
 from camera_pi import Camera
 
 app = Flask(__name__)
+auth = HTTPBasicAuth()
+
+users = {
+    "groot": generate_password_hash(os.environ['password'])
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and \
+            check_password_hash(users.get(username), password):
+        return username
 
 
 @app.route('/')
+@auth.login_required
 def index():
     """Video streaming home page."""
     return render_template('index.html')
@@ -37,4 +51,4 @@ def video_feed():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True, ssl_context=('cert.pem', 'key.pem'))
+    app.run(host='0.0.0.0',threaded=True, ssl_context=('cert.pem', 'key.pem'))
